@@ -1,113 +1,178 @@
-import Image from "next/image";
+'use client'
+import { useQuery } from "react-query";
+import Navbar from "./component/Navbar";
+import axios from 'axios';
+import { Alert, Flex, Spin } from 'antd';
+import 'dotenv/config';
+
+import Container from "./component/Container";
+
+import { convertKelvinToCelsius } from "@/utils/convertKelvintoCelcius";
+import { MdOutlineVisibility } from "react-icons/md";
+import { TbLocationPin } from "react-icons/tb";
+import parseISO from "date-fns/parseISO";
+import { parse, format } from 'date-fns';
+import WeatherIconIndicate from "./WeatherIconIndicate";
+import { useEffect } from "react";
+
+
+
 
 export default function Home() {
+  interface City {
+    id: number;
+    name: string;
+    coord: {
+      lat: number;
+      lon: number;
+    };
+    country: string;
+    population: number;
+    timezone: number;
+    sunrise: number;
+    sunset: number;
+  }
+
+  interface MainWeatherInfo {
+    temp: number;
+    feels_like: number;
+    temp_min: number;
+    temp_max: number;
+    pressure: number;
+    sea_level: number;
+    grnd_level: number;
+    humidity: number;
+    temp_kf: number;
+  }
+
+  interface WeatherDescription {
+    id: number;
+    main: string;
+    description: string;
+    icon: string;
+  }
+
+  interface Clouds {
+    all: number;
+  }
+
+  interface Wind {
+    speed: number;
+    deg: number;
+    gust: number;
+  }
+
+  interface Sys {
+    pod: string;
+  }
+
+  interface WeatherData {
+    cod: string;
+    message: number;
+    cnt: number;
+    list: {
+      dt: number;
+      main: MainWeatherInfo;
+      weather: WeatherDescription[];
+      clouds: Clouds;
+      wind: Wind;
+      visibility: number;
+      pop: number;
+      sys: Sys;
+      dt_txt: string;
+    }[];
+    city: City;
+  }
+
+
+  const { isLoading, error, data } = useQuery<WeatherData>('repoData', async () => {
+    require('dotenv').config();
+    const { data } = await axios.get(`https://api.openweathermap.org/data/2.5/forecast?q=Thanh%20pho%20Ho%20Chi%20Minh,vn&APPID=731cab9135db147dc33054ebc855d064&cnt=56`);
+    return data;
+  });
+  if (isLoading) return (
+    <Flex className="flex items-center min-h-screen justify-center">
+      <Spin tip="Loading" size="large" />
+    </Flex>
+  );
+  const firstData = data?.list[0];
+  console.log("data", data);
+  if (error) return 'An error has occurred:'
+  // Convert Unix timestamp to milliseconds and create a Date object
+  // const weathertime = data?.dt && new Date(data.dt * 1000).toLocaleTimeString();
+  // Format the date as MM/DD/YYYY
+  // const weatherdate = data?.dt && new Date(data.dt * 1000).toLocaleDateString();
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // useEffect (() => {
+  //   labelStatus = 
+  // })
+
+
+  // const dayOfWeek = data?.dt ? daysOfWeek[new Date(data.dt * 1000).getDay()] : undefined;
+  // Check if firstData exists and has dt_txt property
+  if (firstData && firstData.dt_txt) {
+    const formattedDate = format(parseISO(firstData.dt_txt), 'EEEE');
+    console.log(formattedDate); // Output: The full name of the day of the week
+  }
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className="flex flex-col gap-4 bg-gray-100 min-h-screen">
+      <Navbar />
+      <div className="">
+        <main className="px-3 max-w-7xl mx-auto flex flex-col gap-9 w-full pb-8 pt-2">
+          <section>
+            {/* {for day forcasts} */}
+            <div>
+              <h2 className="flex gap-1 text-2xl items-end">
+                <p className="">{format(parseISO(firstData?.dt_txt ?? " "), "EEEE")}</p>
+                <p className="text-lg">({format(parseISO(firstData?.dt_txt ?? ""), "dd.MM.yyyy")})</p>
+              </h2>
+              <Container className="gap-10 px-6 items-center ">
+                <div className="flex flex-col px-4">
+                  <span>{data?.city.name}</span>
+                  <span className="text-3xl">{convertKelvinToCelsius(firstData?.main.temp)}°&nbsp;</span>
+                  <p className="text-xs space-x-l white-space-nowrap ">
+                    <span>feels like {convertKelvinToCelsius(firstData?.main.feels_like)}°</span>
+                  </p>
+                  <p className="text-xs space-x-2">
+                    <span>{convertKelvinToCelsius(firstData?.main.temp_min)}°↓</span>
+                    <span>{convertKelvinToCelsius(firstData?.main.temp_max)}°↑</span>
+                  </p>
+                  <p className="text-xs space-x-l">
+                    <span>Humidity {(firstData?.main.humidity)}%</span>
+                  </p>
+                </div>
+                <div className="flex gap-10 sm:gap-16 overflow-x-auto w-full justify-between pr-3">
+                  {data?.list.map((d, i) => (
+                    <div key={i} className="flex flex-col justify-between gap-2 items-center text-xs font-bold ">
+                      <p className="whitespace-nowrap">{format(parseISO(d.dt_txt), "h:mm a")}</p>
+                      <WeatherIconIndicate iconName={d.weather[0].icon} />
+                      <p>{convertKelvinToCelsius(d?.main.temp ?? 0)}°&nbsp;</p>
+                    </div>
+                  ))}
+                </div>
+              </Container>
+            </div>
+            <div className="flex gap-4 py-3">
+              {/* left */}
+              <Container className="w-fit justify-center flex-col px-4 items-center bg-gray-300/80" >
+                <p className="capitalize text-center text-sm">{firstData?.weather[0].description ?? ""}
+                  <span></span>
+                </p>
+                <WeatherIconIndicate iconName={firstData?.weather[0].icon ?? ""} />
+              </Container>
+              {/* right */}
+              <Container className="bg-yellow-300/60 overflow-x-auto px-6 gap-4 justify-between">
+
+              </Container>
+            </div>
+          </section>
+          <section>
+            {/* {for 7 day forcasts} */}
+          </section>
+        </main>
       </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore starter templates for Next.js.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50 text-balance`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    </div>
   );
 }
