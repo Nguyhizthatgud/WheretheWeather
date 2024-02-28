@@ -10,7 +10,7 @@ export default function WeatherIconIndicate(props: React.HTMLProps<HTMLDivElemen
                 width={100}
                 height={100}
                 alt="WheretheWeatherIcon"
-                className='absolute h-full w-full' src={`https://openweathermap.org/img/wn/${props.iconName}@4x.png`} alt="Cloudy Icon" />
+                className='absolute h-full w-full' src={`https://openweathermap.org/img/wn/${props.iconName}@4x.png`}/>
         </div>
     )
 }

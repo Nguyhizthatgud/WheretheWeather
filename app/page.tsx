@@ -8,17 +8,72 @@ import 'dotenv/config';
 import Container from "./component/Container";
 
 import { convertKelvinToCelsius } from "@/utils/convertKelvintoCelcius";
-import { MdOutlineVisibility } from "react-icons/md";
-import { TbLocationPin } from "react-icons/tb";
 import parseISO from "date-fns/parseISO";
-import { parse, format } from 'date-fns';
+import { parse, format, fromUnixTime } from 'date-fns';
 import WeatherIconIndicate from "./WeatherIconIndicate";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import ForecastweatherDetails from "./component/ForecastweatherDetails";
+import { MetterconvertoKilometer } from "@/utils/MetterconvertoKilometer";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartData,
+} from 'chart.js/auto';
 
-
-
-
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
+import { Line } from 'react-chartjs-2';
+import Chart from "./component/Chart";
 export default function Home() {
+  const [chartData, setChartData] = useState<ChartData>({
+    labels: [],
+    datasets: [],
+  });
+
+  const [chartOption, setchartOption] = useState({});
+
+  useEffect(() => {
+    setChartData({
+      labels: data?.list.map((item) => format(parseISO(item.dt_txt), 'HH:mm')) || [],
+      datasets: [
+        {
+          label: 'Temperature',
+          data: data?.list.map((item) => item.main.temp - 273.15) || [],
+          backgroundColor: '#f87979',
+          borderColor: '#f64a4c',
+        },
+        {
+          label: 'Humidity',
+          data: data?.list.map((item) => item.main.humidity) || [],
+          backgroundColor: '#4F71D7',
+          borderColor: '#4F71D7',
+        },
+      ],
+    })
+    setchartOption({
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+        },
+        title: {
+          display: true,
+          text: 'Temperature Relavent',
+        },
+      },
+    })
+  })
   interface City {
     id: number;
     name: string;
@@ -83,7 +138,15 @@ export default function Home() {
     }[];
     city: City;
   }
-
+  interface ChartData {
+    labels: string[];
+    datasets: {
+      label: string;
+      data: number[];
+      backgroundColor: string;
+      borderColor: string;
+    }[];
+  }
 
   const { isLoading, error, data } = useQuery<WeatherData>('repoData', async () => {
     require('dotenv').config();
@@ -98,22 +161,34 @@ export default function Home() {
   const firstData = data?.list[0];
   console.log("data", data);
   if (error) return 'An error has occurred:'
-  // Convert Unix timestamp to milliseconds and create a Date object
-  // const weathertime = data?.dt && new Date(data.dt * 1000).toLocaleTimeString();
-  // Format the date as MM/DD/YYYY
-  // const weatherdate = data?.dt && new Date(data.dt * 1000).toLocaleDateString();
-  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  // useEffect (() => {
-  //   labelStatus = 
-  // })
-
-
-  // const dayOfWeek = data?.dt ? daysOfWeek[new Date(data.dt * 1000).getDay()] : undefined;
-  // Check if firstData exists and has dt_txt property
   if (firstData && firstData.dt_txt) {
     const formattedDate = format(parseISO(firstData.dt_txt), 'EEEE');
     console.log(formattedDate); // Output: The full name of the day of the week
   }
+
+  // const [chartData, setChartData] = useState<ChartData>({
+  //   labels: data?.list.map((item) => format(parseISO(item.dt_txt), 'HH:mm')) || [],
+  //   datasets: [
+  //     {
+  //       label: 'Temperature',
+  //       data: data?.list.map((item) => item.main.temp - 273.15) as number[],
+  //       backgroundColor: '#f87979',
+  //       borderColor: '#f64a4c',
+  //     },
+  //   ],
+  // });
+  // const [chartOption, setchartOption] = useState({
+  //   responsive: true,
+  //   scales: {
+  //     y: {
+  //       beginAtZero: true,
+  //     },
+  //   },
+  // });
+
+
+
+
   return (
     <div className="flex flex-col gap-4 bg-gray-100 min-h-screen">
       <Navbar />
@@ -144,7 +219,7 @@ export default function Home() {
                 <div className="flex gap-10 sm:gap-16 overflow-x-auto w-full justify-between pr-3">
                   {data?.list.map((d, i) => (
                     <div key={i} className="flex flex-col justify-between gap-2 items-center text-xs font-bold ">
-                      <p className="whitespace-nowrap">{format(parseISO(d.dt_txt), "h:mm a")}</p>
+                      <p className="whitespace-nowrap">{format(parseISO(d.dt_txt), "h:mm")}</p>
                       <WeatherIconIndicate iconName={d.weather[0].icon} />
                       <p>{convertKelvinToCelsius(d?.main.temp ?? 0)}°&nbsp;</p>
                     </div>
@@ -152,27 +227,36 @@ export default function Home() {
                 </div>
               </Container>
             </div>
-            <div className="flex gap-4 py-3">
+            <div className="flex flex-row gap-4 py-3">
               {/* left */}
-              <Container className="w-fit justify-center flex-col px-4 items-center bg-gray-300/80" >
+              <Container className="flex w-fit justify-center flex-col px-4 items-center bg-gray-300/80" >
                 <p className="capitalize text-center text-sm">{firstData?.weather[0].description ?? ""}
-                  <span></span>
                 </p>
                 <WeatherIconIndicate iconName={firstData?.weather[0].icon ?? ""} />
               </Container>
               {/* right */}
-              <Container className="bg-yellow-300/60 overflow-x-auto px-6 gap-4 justify-between">
-
+              <Container className=" bg-yellow-300/60 overflow-x-auto px-6 gap-4 justify-between ">
+                <ForecastweatherDetails
+                  visability={MetterconvertoKilometer(firstData?.visibility ?? 10000)} humidity={`${firstData?.main.humidity}%`} WindSpeed={`${(firstData?.wind.speed ?? 0)} m/s `}
+                  airPressure={`${Math.round(firstData?.main.pressure ?? 0)} hPa `}
+                  sunrise={`${format(fromUnixTime(data?.city.sunrise ?? 0), "H:mm")}`}
+                  sunset={`${format(fromUnixTime(data?.city.sunset ?? 0), "H:mm")} `} />
               </Container>
             </div>
           </section>
           <section>
+            {/* {for chart} */}
+            <Line data={chartData} options={chartOption} width={500} height={300} />
+
+
+          </section>
+          <section>
             {/* {for 7 day forcasts} */}
+
           </section>
         </main>
       </div>
-
-
     </div>
   );
+
 }
